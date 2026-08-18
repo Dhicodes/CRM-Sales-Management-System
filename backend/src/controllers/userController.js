@@ -27,4 +27,9 @@ const deactivateUser = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, user, 'User deactivated successfully');
 });
 
-module.exports = { createUser, listUsers, getUser, updateUser, deactivateUser };
+const listAssignableUsers = asyncHandler(async (req, res) => {
+  const users = await userService.listAssignableUsers(req.user, req.scopeIds);
+  sendSuccess(res, 200, users, 'Assignable users retrieved successfully');
+});
+
+module.exports = { createUser, listUsers, getUser, updateUser, deactivateUser, listAssignableUsers };

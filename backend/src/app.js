@@ -6,6 +6,7 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { sendSuccess } = require('./utils/apiResponse');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
+const leadsRoutes = require('./routes/leads.routes');
 
 const app = express();
 
@@ -20,9 +21,10 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/leads', leadsRoutes);
 
-// Resource routes (leads, customers, deals, activities, notifications,
-// dashboard) are added in later phases.
+// Resource routes (customers, deals, activities, notifications, dashboard)
+// are added in later phases.
 
 app.use(notFound);
 app.use(errorHandler);

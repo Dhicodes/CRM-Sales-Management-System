@@ -1,0 +1,24 @@
+const express = require('express');
+const leadController = require('../controllers/leadController');
+const authenticate = require('../middleware/authenticate');
+const scopeToAssigned = require('../middleware/scopeToAssigned');
+const validate = require('../middleware/validate');
+const {
+  createLeadValidator,
+  updateLeadValidator,
+  assignLeadValidator,
+  addNoteValidator,
+} = require('../validators/leadValidators');
+
+const router = express.Router();
+
+router.use(authenticate, scopeToAssigned);
+
+router.get('/', leadController.listLeads);
+router.post('/', createLeadValidator, validate, leadController.createLead);
+router.get('/:id', leadController.getLead);
+router.patch('/:id', updateLeadValidator, validate, leadController.updateLead);
+router.patch('/:id/assign', assignLeadValidator, validate, leadController.assignLead);
+router.post('/:id/notes', addNoteValidator, validate, leadController.addNote);
+
+module.exports = router;

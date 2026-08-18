@@ -60,4 +60,14 @@ async function deactivateUser(id, requestingUserId) {
   return user;
 }
 
-module.exports = { createUser, listUsers, getUserById, updateUser, deactivateUser };
+// Read-only lookup of users a requester is allowed to assign records to.
+// Not part of admin user management scope is derived from req.scopeIds
+// so it stays consistent with Leads/Customers/Deals ownership rules.
+async function listAssignableUsers(requestingUser, scopeIds) {
+  if (requestingUser.role === 'admin') {
+    return User.find({ isActive: true, role: { $in: ['sales_manager', 'sales_executive'] } }).sort({ name: 1 });
+  }
+  return User.find({ _id: { $in: scopeIds }, isActive: true }).sort({ name: 1 });
+}
+
+module.exports = { createUser, listUsers, getUserById, updateUser, deactivateUser, listAssignableUsers };
