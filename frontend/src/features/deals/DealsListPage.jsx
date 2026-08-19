@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
 import Pagination from '../../components/Pagination';
@@ -34,12 +34,13 @@ const DEFAULT_FILTERS = {
   limit: 20,
 };
 
-function DealCard({ deal, draggable, onDragStart }) {
+function DealCard({ deal, draggable, onDragStart, onDragEnd }) {
   return (
     <Link
       to={`/deals/${deal._id}`}
       draggable={draggable}
       onDragStart={draggable ? (e) => onDragStart(e, deal) : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
       title={draggable ? 'Drag to another stage, or click to open' : undefined}
       className={`block rounded-md border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300 hover:shadow ${
         draggable ? 'cursor-grab active:cursor-grabbing' : ''
@@ -77,6 +78,50 @@ function DealsListPage() {
   const stageChange = useDealStageChange();
   const [dragOverStage, setDragOverStage] = useState(null);
 
+  // Auto-scrolls the Kanban board horizontally while a card is dragged near
+  // its left/right edge — without this, reaching a column that's off-screen
+  // (e.g. Discovery -> Lost) requires manually scrolling mid-drag, which
+  // native HTML5 drag-and-drop doesn't support out of the box.
+  const kanbanScrollRef = useRef(null);
+  const scrollDirectionRef = useRef(0);
+  const scrollRafRef = useRef(null);
+  const EDGE_SIZE = 90;
+  const SCROLL_SPEED = 16;
+
+  const stepAutoScroll = () => {
+    const container = kanbanScrollRef.current;
+    if (container && scrollDirectionRef.current !== 0) {
+      container.scrollLeft += scrollDirectionRef.current * SCROLL_SPEED;
+    }
+    scrollRafRef.current = requestAnimationFrame(stepAutoScroll);
+  };
+
+  const handleKanbanDragOver = (e) => {
+    const container = kanbanScrollRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (e.clientX < rect.left + EDGE_SIZE) {
+      scrollDirectionRef.current = -1;
+    } else if (e.clientX > rect.right - EDGE_SIZE) {
+      scrollDirectionRef.current = 1;
+    } else {
+      scrollDirectionRef.current = 0;
+    }
+    if (!scrollRafRef.current) {
+      scrollRafRef.current = requestAnimationFrame(stepAutoScroll);
+    }
+  };
+
+  const stopAutoScroll = () => {
+    scrollDirectionRef.current = 0;
+    if (scrollRafRef.current) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+  };
+
+  useEffect(() => stopAutoScroll, []);
+
   const deals = data?.data?.items || [];
   const { page = 1, totalPages = 1, total = 0 } = data?.data || {};
   const hasActiveFilters =
@@ -93,9 +138,17 @@ function DealsListPage() {
   const handleDropOnStage = (e, stage) => {
     e.preventDefault();
     setDragOverStage(null);
+    stopAutoScroll();
     const dealId = e.dataTransfer.getData('text/plain');
     const deal = deals.find((d) => d._id === dealId);
     if (deal) stageChange.requestStageChange(deal, stage);
+  };
+
+  const handleDragEnd = () => {
+    // Safety net for a drag that's cancelled/dropped outside any column
+    // (e.g. released outside the browser window) — onDrop wouldn't fire.
+    setDragOverStage(null);
+    stopAutoScroll();
   };
 
   const dealsByStage = useMemo(() => {
@@ -314,7 +367,7 @@ function DealsListPage() {
         )}
 
         {!isLoading && !isError && deals.length > 0 && viewMode === 'kanban' && (
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div ref={kanbanScrollRef} onDragOver={handleKanbanDragOver} className="flex gap-4 overflow-x-auto pb-4">
             {STAGES.map((stage) => (
               <div
                 key={stage}
@@ -339,6 +392,7 @@ function DealsListPage() {
                       deal={deal}
                       draggable={canEditDeal(user, deal, assignableUserIds)}
                       onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
                     />
                   ))}
                   {dealsByStage[stage].length === 0 && (
