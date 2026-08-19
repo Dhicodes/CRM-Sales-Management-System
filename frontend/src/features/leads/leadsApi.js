@@ -36,6 +36,7 @@ export const leadsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Leads', id },
         { type: 'Leads', id: 'LIST' },
+        { type: 'Timeline', id: `Lead-${id}` },
       ],
     }),
     assignLead: builder.mutation({
@@ -47,11 +48,15 @@ export const leadsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Leads', id },
         { type: 'Leads', id: 'LIST' },
+        { type: 'Timeline', id: `Lead-${id}` },
       ],
     }),
     addLeadNote: builder.mutation({
       query: ({ id, text }) => ({ url: `/leads/${id}/notes`, method: 'POST', body: { text } }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Leads', id }],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Leads', id },
+        { type: 'Timeline', id: `Lead-${id}` },
+      ],
     }),
     convertLead: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/leads/${id}/convert`, method: 'POST', body }),
@@ -59,7 +64,12 @@ export const leadsApi = api.injectEndpoints({
         { type: 'Leads', id },
         { type: 'Leads', id: 'LIST' },
         { type: 'Customers', id: 'LIST' },
+        { type: 'Timeline', id: `Lead-${id}` },
       ],
+    }),
+    getLeadTimeline: builder.query({
+      query: (id) => `/leads/${id}/timeline`,
+      providesTags: (result, error, id) => [{ type: 'Timeline', id: `Lead-${id}` }],
     }),
   }),
 });
@@ -72,4 +82,5 @@ export const {
   useAssignLeadMutation,
   useAddLeadNoteMutation,
   useConvertLeadMutation,
+  useGetLeadTimelineQuery,
 } = leadsApi;

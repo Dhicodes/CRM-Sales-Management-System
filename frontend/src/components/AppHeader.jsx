@@ -20,6 +20,12 @@ function AppHeader() {
         <Link to="/customers" className="text-sm text-slate-600 hover:text-slate-900">
           Customers
         </Link>
+        <Link to="/deals" className="text-sm text-slate-600 hover:text-slate-900">
+          Deals
+        </Link>
+        <Link to="/activities" className="text-sm text-slate-600 hover:text-slate-900">
+          My Activities
+        </Link>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-sm text-slate-600">

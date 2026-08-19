@@ -1,7 +1,7 @@
 const { ApiError } = require('../utils/apiResponse');
 const { buildPagination, buildSort, escapeRegex } = require('../utils/queryBuilder');
 const { resolveAssignee } = require('./assignmentService');
-const dealService = require('./dealService');
+const timelineService = require('./timelineService');
 const Customer = require('../models/Customer');
 
 const SORTABLE_FIELDS = ['createdAt', 'updatedAt', 'name'];
@@ -52,6 +52,14 @@ async function createCustomer(data, requestingUser, scopeIds) {
     createdBy: requestingUser._id,
   });
 
+  await timelineService.log({
+    entityType: 'Customer',
+    entityId: customer._id,
+    eventType: 'created',
+    description: 'Customer created',
+    performedBy: requestingUser._id,
+  });
+
   await customer.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
   return customer;
 }
@@ -68,7 +76,7 @@ async function getCustomerById(id, scopeIds) {
   return customer;
 }
 
-async function updateCustomer(id, updates, scopeIds) {
+async function updateCustomer(id, updates, requestingUser, scopeIds) {
   const customer = await Customer.findById(id);
   if (!customer) throw new ApiError(404, 'Customer not found');
   if (!isInScope(scopeIds, customer)) {
@@ -82,6 +90,17 @@ async function updateCustomer(id, updates, scopeIds) {
 
   await customer.save();
   await customer.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  if (editableFields.some((f) => updates[f] !== undefined)) {
+    await timelineService.log({
+      entityType: 'Customer',
+      entityId: customer._id,
+      eventType: 'details_updated',
+      description: 'Customer details updated',
+      performedBy: requestingUser._id,
+    });
+  }
+
   return customer;
 }
 
@@ -101,6 +120,16 @@ async function assignCustomer(id, targetUserId, requestingUser, scopeIds) {
   customer.assignedTo = await resolveAssignee(targetUserId, requestingUser, scopeIds);
   await customer.save();
   await customer.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  await timelineService.log({
+    entityType: 'Customer',
+    entityId: customer._id,
+    eventType: 'reassigned',
+    description: 'Customer reassigned',
+    performedBy: requestingUser._id,
+    metadata: { to: customer.assignedTo._id },
+  });
+
   return customer;
 }
 
@@ -110,6 +139,11 @@ async function listCustomerDeals(id, scopeIds) {
   if (!isInScope(scopeIds, customer)) {
     throw new ApiError(403, 'You do not have permission to view this customer');
   }
+  // Required lazily (not at module top-level) customerService and
+  // dealService require each other, and capturing this at load time can
+  // grab a stale/incomplete reference depending on which module loads
+  // first (see dealService.js for the same pattern on its side).
+  const dealService = require('./dealService');
   return dealService.listByCustomer(id);
 }
 

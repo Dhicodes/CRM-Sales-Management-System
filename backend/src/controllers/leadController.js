@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const leadService = require('../services/leadService');
 const leadConversionService = require('../services/leadConversionService');
+const timelineService = require('../services/timelineService');
 
 const listLeads = asyncHandler(async (req, res) => {
   const result = await leadService.listLeads(req.query, req.scopeIds);
@@ -19,7 +20,7 @@ const getLead = asyncHandler(async (req, res) => {
 });
 
 const updateLead = asyncHandler(async (req, res) => {
-  const lead = await leadService.updateLead(req.params.id, req.body, req.scopeIds);
+  const lead = await leadService.updateLead(req.params.id, req.body, req.user, req.scopeIds);
   sendSuccess(res, 200, lead, 'Lead updated successfully');
 });
 
@@ -38,4 +39,10 @@ const convertLead = asyncHandler(async (req, res) => {
   sendSuccess(res, 201, result, 'Lead converted successfully');
 });
 
-module.exports = { listLeads, createLead, getLead, updateLead, assignLead, addNote, convertLead };
+const getTimeline = asyncHandler(async (req, res) => {
+  await leadService.getLeadById(req.params.id, req.scopeIds);
+  const events = await timelineService.getTimeline('Lead', req.params.id);
+  sendSuccess(res, 200, events, 'Timeline retrieved successfully');
+});
+
+module.exports = { listLeads, createLead, getLead, updateLead, assignLead, addNote, convertLead, getTimeline };

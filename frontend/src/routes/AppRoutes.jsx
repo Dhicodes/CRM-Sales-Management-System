@@ -8,9 +8,12 @@ import LeadDetailPage from '../features/leads/LeadDetailPage';
 import CustomersListPage from '../features/customers/CustomersListPage';
 import CustomerFormPage from '../features/customers/CustomerFormPage';
 import CustomerDetailPage from '../features/customers/CustomerDetailPage';
+import DealsListPage from '../features/deals/DealsListPage';
+import DealFormPage from '../features/deals/DealFormPage';
+import DealDetailPage from '../features/deals/DealDetailPage';
+import MyActivitiesPage from '../features/activities/MyActivitiesPage';
 
-// Feature routes (deals, activities, notifications, dashboard) are added
-// in later phases.
+// Feature routes (notifications, dashboard) are added in later phases.
 function AppRoutes() {
   return (
     <Routes>
@@ -84,6 +87,46 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <CustomerFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deals"
+        element={
+          <ProtectedRoute>
+            <DealsListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deals/new"
+        element={
+          <ProtectedRoute>
+            <DealFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deals/:id"
+        element={
+          <ProtectedRoute>
+            <DealDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deals/:id/edit"
+        element={
+          <ProtectedRoute>
+            <DealFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/activities"
+        element={
+          <ProtectedRoute>
+            <MyActivitiesPage />
           </ProtectedRoute>
         }
       />

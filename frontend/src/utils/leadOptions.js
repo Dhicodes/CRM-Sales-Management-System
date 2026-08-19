@@ -1,5 +1,11 @@
 export const SOURCES = ['website', 'referral', 'social_media', 'email', 'phone'];
+// Settable via the status dropdown 'converted' is reached only through the
+// dedicated conversion flow, never a direct edit.
 export const STATUSES = ['new', 'contacted', 'qualified', 'unqualified'];
+// Every status a lead can actually be in used for the list-page filter,
+// where filtering by "Converted" is legitimate even though it can't be set
+// directly.
+export const FILTERABLE_STATUSES = [...STATUSES, 'converted'];
 export const PRIORITIES = ['low', 'medium', 'high'];
 
 export const SOURCE_LABELS = {

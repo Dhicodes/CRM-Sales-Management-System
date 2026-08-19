@@ -17,6 +17,7 @@ export const api = createApi({
     'Customers',
     'Deals',
     'Activities',
+    'Timeline',
     'Notifications',
     'Dashboard',
   ],

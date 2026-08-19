@@ -8,6 +8,8 @@ const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const leadsRoutes = require('./routes/leads.routes');
 const customersRoutes = require('./routes/customers.routes');
+const dealsRoutes = require('./routes/deals.routes');
+const activitiesRoutes = require('./routes/activities.routes');
 
 const app = express();
 
@@ -24,9 +26,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/customers', customersRoutes);
+app.use('/api/deals', dealsRoutes);
+app.use('/api/activities', activitiesRoutes);
 
-// Resource routes (deals, activities, notifications, dashboard) are added
-// in later phases.
+// Resource routes (notifications, dashboard) are added in later phases.
 
 app.use(notFound);
 app.use(errorHandler);

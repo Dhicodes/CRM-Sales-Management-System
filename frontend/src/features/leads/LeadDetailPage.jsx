@@ -6,8 +6,16 @@ import StatusBadge from '../../components/StatusBadge';
 import PriorityBadge from '../../components/PriorityBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
-import { useGetLeadQuery, useUpdateLeadMutation, useAssignLeadMutation, useAddLeadNoteMutation } from './leadsApi';
+import {
+  useGetLeadQuery,
+  useUpdateLeadMutation,
+  useAssignLeadMutation,
+  useAddLeadNoteMutation,
+  useGetLeadTimelineQuery,
+} from './leadsApi';
 import ConvertLeadModal from './ConvertLeadModal';
+import TimelineFeed from '../../components/TimelineFeed';
+import FollowUpsSection from '../../components/FollowUpsSection';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentUser } from '../auth/authSlice';
@@ -21,6 +29,7 @@ function LeadDetailPage() {
   const { showSuccess, showError } = useToast();
 
   const { data, isLoading, isError, error, refetch } = useGetLeadQuery(id);
+  const { data: timelineData, isLoading: isLoadingTimeline } = useGetLeadTimelineQuery(id);
   const { data: assignableData } = useGetAssignableUsersQuery();
   const assignableUsers = assignableData?.data || [];
   const assignableUserIds = assignableUsers.map((u) => String(u._id));
@@ -316,6 +325,15 @@ function LeadDetailPage() {
               ))}
             </ul>
           )}
+        </section>
+
+        <div className="mt-4">
+          <FollowUpsSection relatedToType="Lead" relatedToId={id} />
+        </div>
+
+        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Timeline</h2>
+          <TimelineFeed events={timelineData?.data} isLoading={isLoadingTimeline} />
         </section>
       </main>
 

@@ -25,7 +25,12 @@ const authSlice = createSlice({
         state.user = action.payload.data;
         state.status = 'authenticated';
       })
-      .addMatcher(authApi.endpoints.getMe.matchRejected, (state) => {
+      .addMatcher(authApi.endpoints.getMe.matchRejected, (state, action) => {
+        // A client-side abort/skip (e.g. from resetApiState() re-triggering
+        // this query on login/logout) is not an auth failure ignoring it
+        // here avoids a false "logged out" flash that fights the real
+        // fulfilled result landing right after it.
+        if (action.meta.aborted || action.meta.condition) return;
         state.user = null;
         state.status = 'unauthenticated';
       })

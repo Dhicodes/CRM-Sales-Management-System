@@ -1,6 +1,7 @@
 const { ApiError } = require('../utils/apiResponse');
 const { buildPagination, buildSort, buildDateRangeFilter, escapeRegex } = require('../utils/queryBuilder');
 const { resolveAssignee } = require('./assignmentService');
+const timelineService = require('./timelineService');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 
@@ -86,6 +87,15 @@ async function createLead(data, requestingUser, scopeIds) {
     createdBy: requestingUser._id,
   });
 
+  await timelineService.log({
+    entityType: 'Lead',
+    entityId: lead._id,
+    eventType: 'created',
+    description: 'Lead created',
+    performedBy: requestingUser._id,
+    metadata: { source: lead.source },
+  });
+
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
   return lead;
 }
@@ -104,7 +114,7 @@ async function getLeadById(id, scopeIds) {
   return lead;
 }
 
-async function updateLead(id, updates, scopeIds) {
+async function updateLead(id, updates, requestingUser, scopeIds) {
   const lead = await Lead.findById(id);
   if (!lead) throw new ApiError(404, 'Lead not found');
   if (!isEditable(scopeIds, lead)) {
@@ -117,6 +127,8 @@ async function updateLead(id, updates, scopeIds) {
     throw new ApiError(400, 'Use the lead conversion flow to mark a lead as converted');
   }
 
+  const before = { status: lead.status, priority: lead.priority };
+
   const editableFields = ['name', 'email', 'phone', 'company', 'source', 'status', 'priority'];
   for (const field of editableFields) {
     if (updates[field] !== undefined) lead[field] = updates[field];
@@ -124,6 +136,37 @@ async function updateLead(id, updates, scopeIds) {
 
   await lead.save();
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  if (updates.status !== undefined && updates.status !== before.status) {
+    await timelineService.log({
+      entityType: 'Lead',
+      entityId: lead._id,
+      eventType: 'status_changed',
+      description: `Status changed from ${before.status} to ${lead.status}`,
+      performedBy: requestingUser._id,
+      metadata: { from: before.status, to: lead.status },
+    });
+  }
+  if (updates.priority !== undefined && updates.priority !== before.priority) {
+    await timelineService.log({
+      entityType: 'Lead',
+      entityId: lead._id,
+      eventType: 'priority_changed',
+      description: `Priority changed from ${before.priority} to ${lead.priority}`,
+      performedBy: requestingUser._id,
+      metadata: { from: before.priority, to: lead.priority },
+    });
+  }
+  if (['name', 'email', 'phone', 'company', 'source'].some((f) => updates[f] !== undefined)) {
+    await timelineService.log({
+      entityType: 'Lead',
+      entityId: lead._id,
+      eventType: 'details_updated',
+      description: 'Lead details updated',
+      performedBy: requestingUser._id,
+    });
+  }
+
   return lead;
 }
 
@@ -135,6 +178,7 @@ async function assignLead(id, targetUserId, requestingUser, scopeIds) {
   if (lead.status === 'converted') {
     throw new ApiError(400, 'Converted leads cannot be reassigned');
   }
+  const previousAssignee = lead.assignedTo;
 
   if (requestingUser.role === 'sales_executive') {
     if (lead.assignedTo) {
@@ -167,6 +211,16 @@ async function assignLead(id, targetUserId, requestingUser, scopeIds) {
 
   await lead.save();
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  await timelineService.log({
+    entityType: 'Lead',
+    entityId: lead._id,
+    eventType: previousAssignee ? 'reassigned' : 'assigned',
+    description: lead.assignedTo ? (previousAssignee ? 'Lead reassigned' : 'Lead assigned') : 'Lead unassigned',
+    performedBy: requestingUser._id,
+    metadata: { from: previousAssignee, to: lead.assignedTo?._id ?? lead.assignedTo },
+  });
+
   return lead;
 }
 
@@ -183,6 +237,15 @@ async function addNote(id, text, requestingUser, scopeIds) {
   lead.notes.push({ text, author: requestingUser._id });
   await lead.save();
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR, POPULATE_NOTE_AUTHOR]);
+
+  await timelineService.log({
+    entityType: 'Lead',
+    entityId: lead._id,
+    eventType: 'note_added',
+    description: `Note added: "${text.length > 60 ? `${text.slice(0, 60)}…` : text}"`,
+    performedBy: requestingUser._id,
+  });
+
   return lead;
 }
 

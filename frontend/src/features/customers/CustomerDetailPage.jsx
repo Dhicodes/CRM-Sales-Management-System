@@ -5,7 +5,14 @@ import FullPageSpinner from '../../components/FullPageSpinner';
 import StageBadge from '../../components/StageBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
-import { useGetCustomerQuery, useAssignCustomerMutation, useGetCustomerDealsQuery } from './customersApi';
+import {
+  useGetCustomerQuery,
+  useAssignCustomerMutation,
+  useGetCustomerDealsQuery,
+  useGetCustomerTimelineQuery,
+} from './customersApi';
+import TimelineFeed from '../../components/TimelineFeed';
+import FollowUpsSection from '../../components/FollowUpsSection';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentUser } from '../auth/authSlice';
@@ -18,6 +25,7 @@ function CustomerDetailPage() {
 
   const { data, isLoading, isError, error, refetch } = useGetCustomerQuery(id);
   const { data: dealsData, isLoading: isLoadingDeals } = useGetCustomerDealsQuery(id);
+  const { data: timelineData, isLoading: isLoadingTimeline } = useGetCustomerTimelineQuery(id);
   const { data: assignableData } = useGetAssignableUsersQuery();
   const assignableUsers = assignableData?.data || [];
   const assignableUserIds = assignableUsers.map((u) => String(u._id));
@@ -148,10 +156,15 @@ function CustomerDetailPage() {
         </div>
 
         <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Deals</h2>
-          <p className="mb-3 text-xs text-slate-400">
-            Full deal management and the sales pipeline arrive in a later phase — this is a read-only summary.
-          </p>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Deals</h2>
+            <Link
+              to={`/deals/new?customerId=${id}`}
+              className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              New Deal
+            </Link>
+          </div>
 
           {isLoadingDeals && <p className="text-sm text-slate-500">Loading deals…</p>}
 
@@ -160,26 +173,40 @@ function CustomerDetailPage() {
           {!isLoadingDeals && deals.length > 0 && (
             <ul className="space-y-3">
               {deals.map((deal) => (
-                <li key={deal._id} className="rounded-md border border-slate-100 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-800">{deal.title}</span>
-                    <StageBadge stage={deal.stage} />
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                    <span>
-                      Value: {deal.currency} {deal.value.toLocaleString()}
-                    </span>
-                    <span>Probability: {deal.probability}%</span>
-                    <span>
-                      Expected revenue: {deal.currency} {deal.expectedRevenue.toLocaleString()}
-                    </span>
-                    <span>Expected close: {new Date(deal.expectedCloseDate).toLocaleDateString()}</span>
-                    <span>Owner: {deal.assignedTo?.name || 'Unknown'}</span>
-                  </div>
+                <li key={deal._id}>
+                  <Link
+                    to={`/deals/${deal._id}`}
+                    className="block rounded-md border border-slate-100 p-3 hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-800">{deal.title}</span>
+                      <StageBadge stage={deal.stage} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span>
+                        Value: {deal.currency} {deal.value.toLocaleString()}
+                      </span>
+                      <span>Probability: {deal.probability}%</span>
+                      <span>
+                        Expected revenue: {deal.currency} {deal.expectedRevenue.toLocaleString()}
+                      </span>
+                      <span>Expected close: {new Date(deal.expectedCloseDate).toLocaleDateString()}</span>
+                      <span>Owner: {deal.assignedTo?.name || 'Unknown'}</span>
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
           )}
+        </section>
+
+        <div className="mt-4">
+          <FollowUpsSection relatedToType="Customer" relatedToId={id} />
+        </div>
+
+        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Timeline</h2>
+          <TimelineFeed events={timelineData?.data} isLoading={isLoadingTimeline} />
         </section>
       </main>
 

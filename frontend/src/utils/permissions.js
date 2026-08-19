@@ -17,3 +17,13 @@ export function canEditCustomer(user, customer, assignableUserIds) {
   const assignedId = String(customer.assignedTo._id || customer.assignedTo);
   return assignableUserIds.includes(assignedId);
 }
+
+// Mirrors dealService.isInScope + the closed-deal lock: once a deal is Won
+// or Lost, only an admin can still modify it (reopen it via stage change).
+export function canEditDeal(user, deal, assignableUserIds) {
+  if (!user || !deal) return false;
+  if (user.role === 'admin') return true;
+  if (['Won', 'Lost'].includes(deal.stage)) return false;
+  const assignedId = String(deal.assignedTo._id || deal.assignedTo);
+  return assignableUserIds.includes(assignedId);
+}

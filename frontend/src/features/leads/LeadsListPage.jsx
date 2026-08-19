@@ -7,7 +7,14 @@ import Pagination from '../../components/Pagination';
 import { useGetLeadsQuery } from './leadsApi';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useDebouncedValue } from '../../utils/useDebouncedValue';
-import { SOURCES, STATUSES, PRIORITIES, SOURCE_LABELS, STATUS_LABELS, PRIORITY_LABELS } from '../../utils/leadOptions';
+import {
+  SOURCES,
+  FILTERABLE_STATUSES,
+  PRIORITIES,
+  SOURCE_LABELS,
+  STATUS_LABELS,
+  PRIORITY_LABELS,
+} from '../../utils/leadOptions';
 
 const SORT_OPTIONS = [
   { value: '-createdAt', label: 'Newest first' },
@@ -84,7 +91,7 @@ function LeadsListPage() {
             className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           >
             <option value="">All statuses</option>
-            {STATUSES.map((s) => (
+            {FILTERABLE_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABELS[s]}
               </option>

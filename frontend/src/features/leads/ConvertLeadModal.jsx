@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useConvertLeadMutation } from './leadsApi';
 import { useToast } from '../../components/ToastProvider';
+import { todayDateInputValue } from '../../utils/date';
 
 function ConvertLeadModal({ lead, assignableUsers, isManagerOrAdmin, onClose, onConverted }) {
   const { showSuccess, showError } = useToast();
@@ -74,6 +75,7 @@ function ConvertLeadModal({ lead, assignableUsers, isManagerOrAdmin, onClose, on
               <input
                 required
                 type="date"
+                min={todayDateInputValue()}
                 value={expectedCloseDate}
                 onChange={(e) => setExpectedCloseDate(e.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"

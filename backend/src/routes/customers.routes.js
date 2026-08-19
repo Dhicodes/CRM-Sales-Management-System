@@ -19,5 +19,6 @@ router.get('/:id', customerController.getCustomer);
 router.patch('/:id', updateCustomerValidator, validate, customerController.updateCustomer);
 router.patch('/:id/assign', assignCustomerValidator, validate, customerController.assignCustomer);
 router.get('/:id/deals', customerController.listCustomerDeals);
+router.get('/:id/timeline', customerController.getTimeline);
 
 module.exports = router;

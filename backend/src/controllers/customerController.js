@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const customerService = require('../services/customerService');
+const timelineService = require('../services/timelineService');
 
 const listCustomers = asyncHandler(async (req, res) => {
   const result = await customerService.listCustomers(req.query, req.scopeIds);
@@ -18,7 +19,7 @@ const getCustomer = asyncHandler(async (req, res) => {
 });
 
 const updateCustomer = asyncHandler(async (req, res) => {
-  const customer = await customerService.updateCustomer(req.params.id, req.body, req.scopeIds);
+  const customer = await customerService.updateCustomer(req.params.id, req.body, req.user, req.scopeIds);
   sendSuccess(res, 200, customer, 'Customer updated successfully');
 });
 
@@ -32,4 +33,18 @@ const listCustomerDeals = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, deals, 'Customer deals retrieved successfully');
 });
 
-module.exports = { listCustomers, createCustomer, getCustomer, updateCustomer, assignCustomer, listCustomerDeals };
+const getTimeline = asyncHandler(async (req, res) => {
+  await customerService.getCustomerById(req.params.id, req.scopeIds);
+  const events = await timelineService.getTimeline('Customer', req.params.id);
+  sendSuccess(res, 200, events, 'Timeline retrieved successfully');
+});
+
+module.exports = {
+  listCustomers,
+  createCustomer,
+  getCustomer,
+  updateCustomer,
+  assignCustomer,
+  listCustomerDeals,
+  getTimeline,
+};

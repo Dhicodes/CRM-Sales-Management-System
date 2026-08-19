@@ -22,5 +22,6 @@ router.patch('/:id', updateLeadValidator, validate, leadController.updateLead);
 router.patch('/:id/assign', assignLeadValidator, validate, leadController.assignLead);
 router.post('/:id/notes', addNoteValidator, validate, leadController.addNote);
 router.post('/:id/convert', convertLeadValidator, validate, leadController.convertLead);
+router.get('/:id/timeline', leadController.getTimeline);
 
 module.exports = router;

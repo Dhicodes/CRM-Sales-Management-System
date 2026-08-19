@@ -2,6 +2,7 @@ const { ApiError } = require('../utils/apiResponse');
 const { resolveAssignee } = require('./assignmentService');
 const leadService = require('./leadService');
 const dealService = require('./dealService');
+const timelineService = require('./timelineService');
 const Lead = require('../models/Lead');
 const Customer = require('../models/Customer');
 const Deal = require('../models/Deal');
@@ -71,6 +72,31 @@ async function convertLead(leadId, data, requestingUser, scopeIds) {
   await customer.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
   await deal.populate(POPULATE_ASSIGNEE);
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  await timelineService.log({
+    entityType: 'Lead',
+    entityId: lead._id,
+    eventType: 'converted',
+    description: 'Lead converted to customer',
+    performedBy: requestingUser._id,
+    metadata: { customerId: customer._id, dealId: deal._id },
+  });
+  await timelineService.log({
+    entityType: 'Customer',
+    entityId: customer._id,
+    eventType: 'created',
+    description: 'Customer created from lead conversion',
+    performedBy: requestingUser._id,
+    metadata: { originLead: lead._id },
+  });
+  await timelineService.log({
+    entityType: 'Deal',
+    entityId: deal._id,
+    eventType: 'created',
+    description: 'Deal created from lead conversion',
+    performedBy: requestingUser._id,
+    metadata: { originLead: lead._id, customerId: customer._id },
+  });
 
   return { lead, customer, deal };
 }

@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 const mongoose = require('mongoose');
 const { SOURCES, STATUSES, PRIORITIES } = require('../models/Lead');
+const { isTodayOrFuture } = require('../utils/dateValidation');
 
 const assignableIdOrNull = (value) => value === null || mongoose.isValidObjectId(value);
 
@@ -40,7 +41,12 @@ const addNoteValidator = [body('text').trim().notEmpty().withMessage('Note text 
 const convertLeadValidator = [
   body('dealTitle').trim().notEmpty().withMessage('Deal title is required'),
   body('dealValue').isFloat({ gt: 0 }).withMessage('Deal value must be a positive number'),
-  body('expectedCloseDate').isISO8601().withMessage('A valid expected close date is required').toDate(),
+  body('expectedCloseDate')
+    .isISO8601()
+    .withMessage('A valid expected close date is required')
+    .custom(isTodayOrFuture)
+    .withMessage('Expected close date cannot be in the past')
+    .toDate(),
   body('assignedTo')
     .optional()
     .custom((value) => mongoose.isValidObjectId(value))
