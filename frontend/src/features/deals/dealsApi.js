@@ -29,7 +29,7 @@ export const dealsApi = api.injectEndpoints({
     }),
     createDeal: builder.mutation({
       query: (body) => ({ url: '/deals', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Deals', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Deals', id: 'LIST' }, { type: 'Dashboard', id: 'SUMMARY' }, { type: 'Dashboard', id: 'TEAM' }],
     }),
     updateDeal: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/deals/${id}`, method: 'PATCH', body }),
@@ -37,6 +37,8 @@ export const dealsApi = api.injectEndpoints({
         { type: 'Deals', id },
         { type: 'Deals', id: 'LIST' },
         { type: 'Timeline', id: `Deal-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     changeDealStage: builder.mutation({
@@ -45,6 +47,8 @@ export const dealsApi = api.injectEndpoints({
         { type: 'Deals', id },
         { type: 'Deals', id: 'LIST' },
         { type: 'Timeline', id: `Deal-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     assignDeal: builder.mutation({
@@ -53,6 +57,8 @@ export const dealsApi = api.injectEndpoints({
         { type: 'Deals', id },
         { type: 'Deals', id: 'LIST' },
         { type: 'Timeline', id: `Deal-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     getDealTimeline: builder.query({

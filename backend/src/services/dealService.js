@@ -2,6 +2,7 @@ const { ApiError } = require('../utils/apiResponse');
 const { buildPagination, buildSort, buildDateRangeFilter, escapeRegex } = require('../utils/queryBuilder');
 const { resolveAssignee } = require('./assignmentService');
 const timelineService = require('./timelineService');
+const notificationService = require('./notificationService');
 const Deal = require('../models/Deal');
 const { STAGE_DEFAULT_PROBABILITY, STAGES } = Deal;
 
@@ -111,6 +112,11 @@ async function createDeal(data, requestingUser, scopeIds) {
   });
 
   await deal.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR, POPULATE_CUSTOMER]);
+
+  if (String(assignedTo) !== String(requestingUser._id)) {
+    await notificationService.notify(assignedTo, 'deal_assigned', `You were assigned deal "${deal.title}"`, 'Deal', deal._id);
+  }
+
   return deal;
 }
 
@@ -210,6 +216,16 @@ async function changeStage(id, data, requestingUser, scopeIds) {
     metadata: { from: fromStage, to: nextStage },
   });
 
+  if (isClosing && String(deal.assignedTo._id) !== String(requestingUser._id)) {
+    await notificationService.notify(
+      deal.assignedTo._id,
+      'deal_closed',
+      `Deal "${deal.title}" was marked as ${nextStage}`,
+      'Deal',
+      deal._id
+    );
+  }
+
   return deal;
 }
 
@@ -237,6 +253,10 @@ async function assignDeal(id, targetUserId, requestingUser, scopeIds) {
     performedBy: requestingUser._id,
     metadata: { to: deal.assignedTo._id },
   });
+
+  if (String(deal.assignedTo._id) !== String(requestingUser._id)) {
+    await notificationService.notify(deal.assignedTo._id, 'deal_assigned', `You were assigned deal "${deal.title}"`, 'Deal', deal._id);
+  }
 
   return deal;
 }

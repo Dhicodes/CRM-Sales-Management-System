@@ -2,6 +2,7 @@ const { ApiError } = require('../utils/apiResponse');
 const { buildPagination, buildSort, buildDateRangeFilter, escapeRegex } = require('../utils/queryBuilder');
 const { resolveAssignee } = require('./assignmentService');
 const timelineService = require('./timelineService');
+const notificationService = require('./notificationService');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 
@@ -97,6 +98,11 @@ async function createLead(data, requestingUser, scopeIds) {
   });
 
   await lead.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  if (assignedTo && String(assignedTo) !== String(requestingUser._id)) {
+    await notificationService.notify(assignedTo, 'lead_assigned', `You were assigned lead "${lead.name}"`, 'Lead', lead._id);
+  }
+
   return lead;
 }
 
@@ -220,6 +226,10 @@ async function assignLead(id, targetUserId, requestingUser, scopeIds) {
     performedBy: requestingUser._id,
     metadata: { from: previousAssignee, to: lead.assignedTo?._id ?? lead.assignedTo },
   });
+
+  if (lead.assignedTo && String(lead.assignedTo._id) !== String(requestingUser._id)) {
+    await notificationService.notify(lead.assignedTo._id, 'lead_assigned', `You were assigned lead "${lead.name}"`, 'Lead', lead._id);
+  }
 
   return lead;
 }

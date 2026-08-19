@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
 import Pagination from '../../components/Pagination';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useGetActivitiesQuery, useUpdateActivityMutation, useDeleteActivityMutation } from './activitiesApi';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useToast } from '../../components/ToastProvider';
@@ -16,7 +17,23 @@ const STATUS_OPTIONS = [
 
 const RELATED_ROUTES = { Lead: 'leads', Customer: 'customers', Deal: 'deals' };
 
-const DEFAULT_FILTERS = { status: '', type: '', assignedTo: '', page: 1, limit: 20, sort: 'dueDate' };
+const SORT_OPTIONS = [
+  { value: 'dueDate', label: 'Due soonest' },
+  { value: '-dueDate', label: 'Due latest' },
+  { value: '-createdAt', label: 'Newest created' },
+  { value: 'createdAt', label: 'Oldest created' },
+];
+
+const DEFAULT_FILTERS = {
+  status: '',
+  type: '',
+  assignedTo: '',
+  dateFrom: '',
+  dateTo: '',
+  page: 1,
+  limit: 20,
+  sort: 'dueDate',
+};
 
 function MyActivitiesPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -25,12 +42,14 @@ function MyActivitiesPage() {
   const assignableUsers = assignableData?.data || [];
 
   const [updateActivity] = useUpdateActivityMutation();
-  const [deleteActivity] = useDeleteActivityMutation();
+  const [deleteActivity, { isLoading: isDeleting }] = useDeleteActivityMutation();
   const { showSuccess, showError } = useToast();
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const activities = data?.data?.items || [];
   const { page = 1, totalPages = 1, total = 0 } = data?.data || {};
-  const hasActiveFilters = filters.status || filters.type || filters.assignedTo;
+  const hasActiveFilters =
+    filters.status || filters.type || filters.assignedTo || filters.dateFrom || filters.dateTo;
 
   const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
@@ -47,12 +66,14 @@ function MyActivitiesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      await deleteActivity(id).unwrap();
+      await deleteActivity(deleteConfirmId).unwrap();
       showSuccess('Follow-up deleted');
     } catch (err) {
       showError(err.data?.message || 'Failed to delete follow-up');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -98,6 +119,35 @@ function MyActivitiesPage() {
             {assignableUsers.map((u) => (
               <option key={u._id} value={u._id}>
                 {u.name}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => updateFilter('dateFrom', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-slate-500 focus:outline-none"
+              aria-label="Due from"
+            />
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => updateFilter('dateTo', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-slate-500 focus:outline-none"
+              aria-label="Due to"
+            />
+          </div>
+
+          <select
+            value={filters.sort}
+            onChange={(e) => setFilters((prev) => ({ ...prev, sort: e.target.value }))}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -185,7 +235,7 @@ function MyActivitiesPage() {
                               {a.status === 'completed' ? 'Reopen' : 'Complete'}
                             </button>
                             <button
-                              onClick={() => handleDelete(a._id)}
+                              onClick={() => setDeleteConfirmId(a._id)}
                               className="text-xs font-medium text-red-600 hover:underline"
                             >
                               Delete
@@ -207,6 +257,17 @@ function MyActivitiesPage() {
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        title="Delete follow-up"
+        message="This follow-up will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete"
+        danger
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

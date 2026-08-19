@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import HomePage from '../HomePage';
+import DashboardPage from '../features/dashboard/DashboardPage';
 import LoginPage from '../features/auth/LoginPage';
 import ProtectedRoute from '../components/ProtectedRoute';
 import LeadsListPage from '../features/leads/LeadsListPage';
@@ -13,7 +13,6 @@ import DealFormPage from '../features/deals/DealFormPage';
 import DealDetailPage from '../features/deals/DealDetailPage';
 import MyActivitiesPage from '../features/activities/MyActivitiesPage';
 
-// Feature routes (notifications, dashboard) are added in later phases.
 function AppRoutes() {
   return (
     <Routes>
@@ -22,7 +21,7 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <HomePage />
+            <DashboardPage />
           </ProtectedRoute>
         }
       />

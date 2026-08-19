@@ -29,7 +29,7 @@ export const leadsApi = api.injectEndpoints({
     }),
     createLead: builder.mutation({
       query: (body) => ({ url: '/leads', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Leads', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Leads', id: 'LIST' }, { type: 'Dashboard', id: 'SUMMARY' }, { type: 'Dashboard', id: 'TEAM' }],
     }),
     updateLead: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/leads/${id}`, method: 'PATCH', body }),
@@ -37,6 +37,8 @@ export const leadsApi = api.injectEndpoints({
         { type: 'Leads', id },
         { type: 'Leads', id: 'LIST' },
         { type: 'Timeline', id: `Lead-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     assignLead: builder.mutation({
@@ -49,6 +51,8 @@ export const leadsApi = api.injectEndpoints({
         { type: 'Leads', id },
         { type: 'Leads', id: 'LIST' },
         { type: 'Timeline', id: `Lead-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     addLeadNote: builder.mutation({
@@ -65,6 +69,8 @@ export const leadsApi = api.injectEndpoints({
         { type: 'Leads', id: 'LIST' },
         { type: 'Customers', id: 'LIST' },
         { type: 'Timeline', id: `Lead-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     getLeadTimeline: builder.query({

@@ -29,7 +29,7 @@ export const customersApi = api.injectEndpoints({
     }),
     createCustomer: builder.mutation({
       query: (body) => ({ url: '/customers', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Customers', id: 'LIST' }],
+      invalidatesTags: [{ type: 'Customers', id: 'LIST' }, { type: 'Dashboard', id: 'SUMMARY' }, { type: 'Dashboard', id: 'TEAM' }],
     }),
     updateCustomer: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/customers/${id}`, method: 'PATCH', body }),
@@ -49,6 +49,8 @@ export const customersApi = api.injectEndpoints({
         { type: 'Customers', id },
         { type: 'Customers', id: 'LIST' },
         { type: 'Timeline', id: `Customer-${id}` },
+        { type: 'Dashboard', id: 'SUMMARY' },
+        { type: 'Dashboard', id: 'TEAM' },
       ],
     }),
     getCustomerDeals: builder.query({

@@ -3,9 +3,11 @@ const { resolveAssignee } = require('./assignmentService');
 const leadService = require('./leadService');
 const dealService = require('./dealService');
 const timelineService = require('./timelineService');
+const notificationService = require('./notificationService');
 const Lead = require('../models/Lead');
 const Customer = require('../models/Customer');
 const Deal = require('../models/Deal');
+const User = require('../models/User');
 
 const POPULATE_ASSIGNEE = { path: 'assignedTo', select: 'name email role' };
 const POPULATE_CREATOR = { path: 'createdBy', select: 'name email' };
@@ -97,6 +99,30 @@ async function convertLead(leadId, data, requestingUser, scopeIds) {
     performedBy: requestingUser._id,
     metadata: { originLead: lead._id, customerId: customer._id },
   });
+
+  if (String(assignedTo) !== String(requestingUser._id)) {
+    await notificationService.notify(
+      assignedTo,
+      'lead_converted',
+      `Lead "${lead.name}" was converted to a customer`,
+      'Lead',
+      lead._id
+    );
+  }
+  const assignee = await User.findById(assignedTo).select('managerId');
+  if (
+    assignee?.managerId &&
+    String(assignee.managerId) !== String(requestingUser._id) &&
+    String(assignee.managerId) !== String(assignedTo)
+  ) {
+    await notificationService.notify(
+      assignee.managerId,
+      'lead_converted',
+      `${requestingUser.name} converted lead "${lead.name}" to a customer`,
+      'Lead',
+      lead._id
+    );
+  }
 
   return { lead, customer, deal };
 }

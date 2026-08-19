@@ -3,6 +3,7 @@ import { useAppSelector } from '../app/hooks';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import { useLogoutMutation } from '../features/auth/authApi';
 import { ROLE_LABELS } from '../utils/leadOptions';
+import NotificationBell from './NotificationBell';
 
 function AppHeader() {
   const user = useAppSelector(selectCurrentUser);
@@ -13,6 +14,9 @@ function AppHeader() {
       <div className="flex items-center gap-6">
         <Link to="/" className="text-sm font-semibold text-slate-800">
           CRM Sales Management
+        </Link>
+        <Link to="/" className="text-sm text-slate-600 hover:text-slate-900">
+          Dashboard
         </Link>
         <Link to="/leads" className="text-sm text-slate-600 hover:text-slate-900">
           Leads
@@ -28,6 +32,7 @@ function AppHeader() {
         </Link>
       </div>
       <div className="flex items-center gap-3">
+        <NotificationBell />
         <span className="text-sm text-slate-600">
           {user?.name}{' '}
           <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">

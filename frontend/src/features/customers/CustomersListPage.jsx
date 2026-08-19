@@ -13,7 +13,15 @@ const SORT_OPTIONS = [
   { value: '-name', label: 'Name (Z-A)' },
 ];
 
-const DEFAULT_FILTERS = { search: '', assignedTo: '', sort: '-createdAt', page: 1, limit: 20 };
+const DEFAULT_FILTERS = {
+  search: '',
+  assignedTo: '',
+  dateFrom: '',
+  dateTo: '',
+  sort: '-createdAt',
+  page: 1,
+  limit: 20,
+};
 
 function CustomersListPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -27,7 +35,7 @@ function CustomersListPage() {
 
   const customers = data?.data?.items || [];
   const { page = 1, totalPages = 1, total = 0 } = data?.data || {};
-  const hasActiveFilters = filters.search || filters.assignedTo;
+  const hasActiveFilters = filters.search || filters.assignedTo || filters.dateFrom || filters.dateTo;
 
   const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
@@ -68,6 +76,23 @@ function CustomersListPage() {
               </option>
             ))}
           </select>
+
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => updateFilter('dateFrom', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-slate-500 focus:outline-none"
+              aria-label="Created from"
+            />
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => updateFilter('dateTo', e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-slate-500 focus:outline-none"
+              aria-label="Created to"
+            />
+          </div>
 
           <select
             value={filters.sort}

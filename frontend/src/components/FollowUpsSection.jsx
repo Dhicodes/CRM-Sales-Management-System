@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useGetActivitiesQuery, useUpdateActivityMutation, useDeleteActivityMutation } from '../features/activities/activitiesApi';
 import ActivityFormModal from '../features/activities/ActivityFormModal';
+import ConfirmDialog from './ConfirmDialog';
 import { useToast } from './ToastProvider';
 import { TYPE_LABELS } from '../utils/activityOptions';
 
 function FollowUpsSection({ relatedToType, relatedToId }) {
   const { data, isLoading } = useGetActivitiesQuery({ relatedToType, relatedToId, limit: 50, sort: 'dueDate' });
   const [updateActivity] = useUpdateActivityMutation();
-  const [deleteActivity] = useDeleteActivityMutation();
+  const [deleteActivity, { isLoading: isDeleting }] = useDeleteActivityMutation();
   const { showSuccess, showError } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const activities = data?.data?.items || [];
 
@@ -25,12 +27,14 @@ function FollowUpsSection({ relatedToType, relatedToId }) {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      await deleteActivity(id).unwrap();
+      await deleteActivity(deleteConfirmId).unwrap();
       showSuccess('Follow-up deleted');
     } catch (err) {
       showError(err.data?.message || 'Failed to delete follow-up');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -80,7 +84,10 @@ function FollowUpsSection({ relatedToType, relatedToId }) {
                 >
                   {a.status === 'completed' ? 'Reopen' : 'Mark complete'}
                 </button>
-                <button onClick={() => handleDelete(a._id)} className="text-xs font-medium text-red-600 hover:underline">
+                <button
+                  onClick={() => setDeleteConfirmId(a._id)}
+                  className="text-xs font-medium text-red-600 hover:underline"
+                >
                   Delete
                 </button>
               </div>
@@ -96,6 +103,17 @@ function FollowUpsSection({ relatedToType, relatedToId }) {
           onClose={() => setModalOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        title="Delete follow-up"
+        message="This follow-up will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete"
+        danger
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </section>
   );
 }

@@ -1,7 +1,8 @@
 const { ApiError } = require('../utils/apiResponse');
-const { buildPagination, buildSort, escapeRegex } = require('../utils/queryBuilder');
+const { buildPagination, buildSort, buildDateRangeFilter, escapeRegex } = require('../utils/queryBuilder');
 const { resolveAssignee } = require('./assignmentService');
 const timelineService = require('./timelineService');
+const notificationService = require('./notificationService');
 const Customer = require('../models/Customer');
 
 const SORTABLE_FIELDS = ['createdAt', 'updatedAt', 'name'];
@@ -21,6 +22,9 @@ async function listCustomers(query, scopeIds) {
   if (scopeIds !== null) and.push({ assignedTo: { $in: scopeIds } });
 
   if (query.assignedTo) and.push({ assignedTo: query.assignedTo });
+
+  const dateFilter = buildDateRangeFilter('createdAt', query.dateFrom, query.dateTo);
+  if (dateFilter) and.push(dateFilter);
 
   if (query.search) {
     const regex = new RegExp(escapeRegex(query.search), 'i');
@@ -61,6 +65,17 @@ async function createCustomer(data, requestingUser, scopeIds) {
   });
 
   await customer.populate([POPULATE_ASSIGNEE, POPULATE_CREATOR]);
+
+  if (String(assignedTo) !== String(requestingUser._id)) {
+    await notificationService.notify(
+      assignedTo,
+      'customer_assigned',
+      `You were assigned customer "${customer.name}"`,
+      'Customer',
+      customer._id
+    );
+  }
+
   return customer;
 }
 
@@ -129,6 +144,16 @@ async function assignCustomer(id, targetUserId, requestingUser, scopeIds) {
     performedBy: requestingUser._id,
     metadata: { to: customer.assignedTo._id },
   });
+
+  if (String(customer.assignedTo._id) !== String(requestingUser._id)) {
+    await notificationService.notify(
+      customer.assignedTo._id,
+      'customer_assigned',
+      `You were assigned customer "${customer.name}"`,
+      'Customer',
+      customer._id
+    );
+  }
 
   return customer;
 }

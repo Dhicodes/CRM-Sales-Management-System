@@ -1,4 +1,4 @@
-function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', isLoading, onConfirm, onCancel }) {
+function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', danger, isLoading, onConfirm, onCancel }) {
   if (!open) return null;
 
   return (
@@ -17,7 +17,9 @@ function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', isLoadi
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 ${
+              danger ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-800 hover:bg-slate-700'
+            }`}
           >
             {isLoading ? 'Please wait…' : confirmLabel}
           </button>

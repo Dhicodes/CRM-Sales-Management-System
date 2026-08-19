@@ -10,6 +10,8 @@ const leadsRoutes = require('./routes/leads.routes');
 const customersRoutes = require('./routes/customers.routes');
 const dealsRoutes = require('./routes/deals.routes');
 const activitiesRoutes = require('./routes/activities.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 
@@ -28,8 +30,8 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/activities', activitiesRoutes);
-
-// Resource routes (notifications, dashboard) are added in later phases.
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
