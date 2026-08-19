@@ -1,5 +1,6 @@
 const { ApiError } = require('../utils/apiResponse');
 const { buildPagination, buildSort, buildDateRangeFilter, escapeRegex } = require('../utils/queryBuilder');
+const { resolveAssignee } = require('./assignmentService');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 
@@ -65,36 +66,13 @@ async function listLeads(query, scopeIds) {
   return { items, total, page, limit, totalPages: Math.max(Math.ceil(total / limit), 1) };
 }
 
-// Shared by createLead: permissive validation of an explicit assignedTo
-// value (null is always allowed there and means "leave unassigned").
-async function validateAssignee(targetUserId, requestingUser, scopeIds) {
-  if (requestingUser.role === 'sales_executive') {
-    if (String(targetUserId) !== String(requestingUser._id)) {
-      throw new ApiError(403, 'You can only assign leads to yourself');
-    }
-    return requestingUser._id;
-  }
-
-  const target = await User.findById(targetUserId);
-  if (!target || !target.isActive) {
-    throw new ApiError(400, 'assignedTo must reference an active user');
-  }
-
-  if (requestingUser.role === 'sales_manager') {
-    const allowed = scopeIds.some((id) => String(id) === String(target._id));
-    if (!allowed) throw new ApiError(403, 'You can only assign leads to yourself or your team');
-  }
-
-  return target._id;
-}
-
 async function createLead(data, requestingUser, scopeIds) {
   let assignedTo = null;
 
   if (data.assignedTo === undefined) {
     if (requestingUser.role === 'sales_executive') assignedTo = requestingUser._id;
   } else if (data.assignedTo !== null) {
-    assignedTo = await validateAssignee(data.assignedTo, requestingUser, scopeIds);
+    assignedTo = await resolveAssignee(data.assignedTo, requestingUser, scopeIds);
   }
 
   const lead = await Lead.create({
@@ -116,7 +94,9 @@ async function getLeadById(id, scopeIds) {
   const lead = await Lead.findById(id)
     .populate(POPULATE_ASSIGNEE)
     .populate(POPULATE_CREATOR)
-    .populate(POPULATE_NOTE_AUTHOR);
+    .populate(POPULATE_NOTE_AUTHOR)
+    .populate('convertedToCustomer', 'name')
+    .populate('convertedToDeal', 'title stage');
   if (!lead) throw new ApiError(404, 'Lead not found');
   if (!isViewable(scopeIds, lead)) {
     throw new ApiError(403, 'You do not have permission to view this lead');
@@ -152,6 +132,9 @@ async function updateLead(id, updates, scopeIds) {
 async function assignLead(id, targetUserId, requestingUser, scopeIds) {
   const lead = await Lead.findById(id);
   if (!lead) throw new ApiError(404, 'Lead not found');
+  if (lead.status === 'converted') {
+    throw new ApiError(400, 'Converted leads cannot be reassigned');
+  }
 
   if (requestingUser.role === 'sales_executive') {
     if (lead.assignedTo) {
@@ -193,6 +176,9 @@ async function addNote(id, text, requestingUser, scopeIds) {
   if (!isEditable(scopeIds, lead)) {
     throw new ApiError(403, 'You do not have permission to modify this lead');
   }
+  if (lead.status === 'converted') {
+    throw new ApiError(400, 'Converted leads cannot be modified');
+  }
 
   lead.notes.push({ text, author: requestingUser._id });
   await lead.save();
@@ -200,4 +186,14 @@ async function addNote(id, text, requestingUser, scopeIds) {
   return lead;
 }
 
-module.exports = { listLeads, createLead, getLeadById, updateLead, assignLead, addNote };
+module.exports = {
+  listLeads,
+  createLead,
+  getLeadById,
+  updateLead,
+  assignLead,
+  addNote,
+  isEditable,
+  POPULATE_ASSIGNEE,
+  POPULATE_CREATOR,
+};

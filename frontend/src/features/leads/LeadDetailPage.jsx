@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
 import FullPageSpinner from '../../components/FullPageSpinner';
 import StatusBadge from '../../components/StatusBadge';
@@ -7,6 +7,7 @@ import PriorityBadge from '../../components/PriorityBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
 import { useGetLeadQuery, useUpdateLeadMutation, useAssignLeadMutation, useAddLeadNoteMutation } from './leadsApi';
+import ConvertLeadModal from './ConvertLeadModal';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentUser } from '../auth/authSlice';
@@ -15,6 +16,7 @@ import { STATUSES, PRIORITIES, STATUS_LABELS, PRIORITY_LABELS, SOURCE_LABELS } f
 
 function LeadDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const user = useAppSelector(selectCurrentUser);
   const { showSuccess, showError } = useToast();
 
@@ -30,6 +32,7 @@ function LeadDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingValue, setPendingValue] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [convertOpen, setConvertOpen] = useState(false);
 
   if (isLoading) return <FullPageSpinner />;
 
@@ -51,8 +54,10 @@ function LeadDetailPage() {
   }
 
   const lead = data.data;
-  const editable = canEditLead(user, lead, assignableUserIds);
+  const isConverted = lead.status === 'converted';
+  const editable = !isConverted && canEditLead(user, lead, assignableUserIds);
   const isManagerOrAdmin = user.role === 'admin' || user.role === 'sales_manager';
+  const canConvert = editable && lead.status === 'qualified';
 
   const openConfirm = (value) => {
     setPendingValue(value);
@@ -131,15 +136,42 @@ function LeadDetailPage() {
               {lead.createdBy?.name || 'Unknown'}
             </p>
           </div>
-          {editable && (
-            <Link
-              to={`/leads/${id}/edit`}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Edit details
-            </Link>
-          )}
+          <div className="flex gap-2">
+            {canConvert && (
+              <button
+                onClick={() => setConvertOpen(true)}
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                Convert to Customer
+              </button>
+            )}
+            {editable && (
+              <Link
+                to={`/leads/${id}/edit`}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Edit details
+              </Link>
+            )}
+          </div>
         </div>
+
+        {isConverted && (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            This lead has been converted.{' '}
+            {lead.convertedToCustomer && (
+              <Link to={`/customers/${lead.convertedToCustomer._id}`} className="font-medium underline">
+                View customer: {lead.convertedToCustomer.name}
+              </Link>
+            )}
+            {lead.convertedToDeal && (
+              <>
+                {' '}
+                &middot; Deal: {lead.convertedToDeal.title} ({lead.convertedToDeal.stage})
+              </>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -202,45 +234,51 @@ function LeadDetailPage() {
                 )}
               </div>
               {!editable && (
-                <p className="text-xs text-slate-400">Claim this lead to edit its status or priority.</p>
+                <p className="text-xs text-slate-400">
+                  {isConverted
+                    ? 'This lead has been converted and can no longer be edited.'
+                    : 'Claim this lead to edit its status or priority.'}
+                </p>
               )}
             </div>
           </section>
         </div>
 
-        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Assignment</h2>
+        {!isConverted && (
+          <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-700">Assignment</h2>
 
-          {isManagerOrAdmin && (
-            <select
-              value={lead.assignedTo?._id || ''}
-              onChange={(e) => openConfirm(e.target.value)}
-              disabled={isAssigning}
-              className="w-full max-w-xs rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
-            >
-              <option value="">Unassigned</option>
-              {assignableUsers.map((u) => (
-                <option key={u._id} value={u._id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          )}
+            {isManagerOrAdmin && (
+              <select
+                value={lead.assignedTo?._id || ''}
+                onChange={(e) => openConfirm(e.target.value)}
+                disabled={isAssigning}
+                className="w-full max-w-xs rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
+              >
+                <option value="">Unassigned</option>
+                {assignableUsers.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
-          {user.role === 'sales_executive' && !lead.assignedTo && (
-            <button
-              onClick={handleClaim}
-              disabled={isAssigning}
-              className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
-            >
-              {isAssigning ? 'Claiming…' : 'Claim this lead'}
-            </button>
-          )}
+            {user.role === 'sales_executive' && !lead.assignedTo && (
+              <button
+                onClick={handleClaim}
+                disabled={isAssigning}
+                className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+              >
+                {isAssigning ? 'Claiming…' : 'Claim this lead'}
+              </button>
+            )}
 
-          {user.role === 'sales_executive' && lead.assignedTo && String(lead.assignedTo._id) === String(user._id) && (
-            <p className="text-sm text-slate-600">Assigned to you</p>
-          )}
-        </section>
+            {user.role === 'sales_executive' && lead.assignedTo && String(lead.assignedTo._id) === String(user._id) && (
+              <p className="text-sm text-slate-600">Assigned to you</p>
+            )}
+          </section>
+        )}
 
         <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Notes</h2>
@@ -290,6 +328,16 @@ function LeadDetailPage() {
         onConfirm={confirmAssignment}
         onCancel={() => setConfirmOpen(false)}
       />
+
+      {convertOpen && (
+        <ConvertLeadModal
+          lead={lead}
+          assignableUsers={assignableUsers}
+          isManagerOrAdmin={isManagerOrAdmin}
+          onClose={() => setConvertOpen(false)}
+          onConverted={(result) => navigate(`/customers/${result.customer._id}`)}
+        />
+      )}
     </div>
   );
 }

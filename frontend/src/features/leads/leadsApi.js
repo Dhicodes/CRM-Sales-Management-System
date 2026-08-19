@@ -53,6 +53,14 @@ export const leadsApi = api.injectEndpoints({
       query: ({ id, text }) => ({ url: `/leads/${id}/notes`, method: 'POST', body: { text } }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Leads', id }],
     }),
+    convertLead: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/leads/${id}/convert`, method: 'POST', body }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Leads', id },
+        { type: 'Leads', id: 'LIST' },
+        { type: 'Customers', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
@@ -63,4 +71,5 @@ export const {
   useUpdateLeadMutation,
   useAssignLeadMutation,
   useAddLeadNoteMutation,
+  useConvertLeadMutation,
 } = leadsApi;

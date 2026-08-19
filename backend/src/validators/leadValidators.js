@@ -37,4 +37,20 @@ const assignLeadValidator = [
 
 const addNoteValidator = [body('text').trim().notEmpty().withMessage('Note text is required')];
 
-module.exports = { createLeadValidator, updateLeadValidator, assignLeadValidator, addNoteValidator };
+const convertLeadValidator = [
+  body('dealTitle').trim().notEmpty().withMessage('Deal title is required'),
+  body('dealValue').isFloat({ gt: 0 }).withMessage('Deal value must be a positive number'),
+  body('expectedCloseDate').isISO8601().withMessage('A valid expected close date is required').toDate(),
+  body('assignedTo')
+    .optional()
+    .custom((value) => mongoose.isValidObjectId(value))
+    .withMessage('assignedTo must be a valid user id'),
+];
+
+module.exports = {
+  createLeadValidator,
+  updateLeadValidator,
+  assignLeadValidator,
+  addNoteValidator,
+  convertLeadValidator,
+};

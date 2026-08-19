@@ -25,6 +25,9 @@ const leadSchema = new mongoose.Schema(
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     notes: [noteSchema],
+    // Set together when the lead is converted (leadConversionService).
+    convertedToCustomer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
+    convertedToDeal: { type: mongoose.Schema.Types.ObjectId, ref: 'Deal', default: null },
   },
   { timestamps: true }
 );

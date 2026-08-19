@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const leadService = require('../services/leadService');
+const leadConversionService = require('../services/leadConversionService');
 
 const listLeads = asyncHandler(async (req, res) => {
   const result = await leadService.listLeads(req.query, req.scopeIds);
@@ -32,4 +33,9 @@ const addNote = asyncHandler(async (req, res) => {
   sendSuccess(res, 201, lead, 'Note added successfully');
 });
 
-module.exports = { listLeads, createLead, getLead, updateLead, assignLead, addNote };
+const convertLead = asyncHandler(async (req, res) => {
+  const result = await leadConversionService.convertLead(req.params.id, req.body, req.user, req.scopeIds);
+  sendSuccess(res, 201, result, 'Lead converted successfully');
+});
+
+module.exports = { listLeads, createLead, getLead, updateLead, assignLead, addNote, convertLead };
