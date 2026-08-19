@@ -1,0 +1,17 @@
+{
+  "name": "crm-sales-management-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Repo-root package.json used only so Vercel's @vercel/node builder can resolve backend runtime dependencies for the api/index.js serverless function (it walks up from api/ to find the nearest package.json). Local dev still uses backend/package.json and frontend/package.json directly.",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-validator": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0"
+  }
+}
