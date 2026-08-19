@@ -30,6 +30,11 @@ function AppHeader() {
         <Link to="/activities" className="text-sm text-slate-600 hover:text-slate-900">
           My Activities
         </Link>
+        {user?.role === 'admin' && (
+          <Link to="/users" className="text-sm text-slate-600 hover:text-slate-900">
+            Users
+          </Link>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <NotificationBell />

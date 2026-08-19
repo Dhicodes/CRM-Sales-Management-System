@@ -30,6 +30,8 @@ export const PRIORITY_LABELS = {
   high: 'High',
 };
 
+export const ROLES = ['admin', 'sales_manager', 'sales_executive'];
+
 export const ROLE_LABELS = {
   admin: 'Admin',
   sales_manager: 'Sales Manager',

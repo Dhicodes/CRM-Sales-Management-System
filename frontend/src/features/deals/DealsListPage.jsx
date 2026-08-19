@@ -4,8 +4,13 @@ import AppHeader from '../../components/AppHeader';
 import Pagination from '../../components/Pagination';
 import StageBadge from '../../components/StageBadge';
 import { useGetDealsQuery } from './dealsApi';
+import { useDealStageChange } from './useDealStageChange';
+import DealStageDialogs from './DealStageDialogs';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
 import { useDebouncedValue } from '../../utils/useDebouncedValue';
+import { useAppSelector } from '../../app/hooks';
+import { selectCurrentUser } from '../auth/authSlice';
+import { canEditDeal } from '../../utils/permissions';
 import { STAGES } from '../../utils/dealOptions';
 
 const SORT_OPTIONS = [
@@ -29,11 +34,16 @@ const DEFAULT_FILTERS = {
   limit: 20,
 };
 
-function DealCard({ deal }) {
+function DealCard({ deal, draggable, onDragStart }) {
   return (
     <Link
       to={`/deals/${deal._id}`}
-      className="block rounded-md border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300 hover:shadow"
+      draggable={draggable}
+      onDragStart={draggable ? (e) => onDragStart(e, deal) : undefined}
+      title={draggable ? 'Drag to another stage, or click to open' : undefined}
+      className={`block rounded-md border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300 hover:shadow ${
+        draggable ? 'cursor-grab active:cursor-grabbing' : ''
+      }`}
     >
       <p className="text-sm font-medium text-slate-800">{deal.title}</p>
       <p className="mt-0.5 text-xs text-slate-500">{deal.customer?.name || 'Unknown customer'}</p>
@@ -62,6 +72,10 @@ function DealsListPage() {
   const { data, isLoading, isFetching, isError, error, refetch } = useGetDealsQuery(queryParams);
   const { data: assignableData } = useGetAssignableUsersQuery();
   const assignableUsers = assignableData?.data || [];
+  const assignableUserIds = assignableUsers.map((u) => String(u._id));
+  const user = useAppSelector(selectCurrentUser);
+  const stageChange = useDealStageChange();
+  const [dragOverStage, setDragOverStage] = useState(null);
 
   const deals = data?.data?.items || [];
   const { page = 1, totalPages = 1, total = 0 } = data?.data || {};
@@ -70,6 +84,19 @@ function DealsListPage() {
 
   const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
+
+  const handleDragStart = (e, deal) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', deal._id);
+  };
+
+  const handleDropOnStage = (e, stage) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    const dealId = e.dataTransfer.getData('text/plain');
+    const deal = deals.find((d) => d._id === dealId);
+    if (deal) stageChange.requestStageChange(deal, stage);
+  };
 
   const dealsByStage = useMemo(() => {
     const grouped = Object.fromEntries(STAGES.map((s) => [s, []]));
@@ -289,14 +316,30 @@ function DealsListPage() {
         {!isLoading && !isError && deals.length > 0 && viewMode === 'kanban' && (
           <div className="flex gap-4 overflow-x-auto pb-4">
             {STAGES.map((stage) => (
-              <div key={stage} className="w-64 shrink-0">
+              <div
+                key={stage}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverStage(stage);
+                }}
+                onDragLeave={() => setDragOverStage((prev) => (prev === stage ? null : prev))}
+                onDrop={(e) => handleDropOnStage(e, stage)}
+                className={`w-64 shrink-0 rounded-md ${
+                  dragOverStage === stage ? 'bg-slate-100 ring-2 ring-slate-300' : ''
+                }`}
+              >
                 <div className="mb-2 flex items-center justify-between px-1">
                   <StageBadge stage={stage} />
                   <span className="text-xs text-slate-400">{dealsByStage[stage].length}</span>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex min-h-[3rem] flex-col gap-2 p-1">
                   {dealsByStage[stage].map((deal) => (
-                    <DealCard key={deal._id} deal={deal} />
+                    <DealCard
+                      key={deal._id}
+                      deal={deal}
+                      draggable={canEditDeal(user, deal, assignableUserIds)}
+                      onDragStart={handleDragStart}
+                    />
                   ))}
                   {dealsByStage[stage].length === 0 && (
                     <p className="rounded-md border border-dashed border-slate-200 p-3 text-center text-xs text-slate-400">
@@ -309,6 +352,8 @@ function DealsListPage() {
           </div>
         )}
       </main>
+
+      <DealStageDialogs {...stageChange} />
     </div>
   );
 }

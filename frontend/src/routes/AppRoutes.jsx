@@ -12,6 +12,7 @@ import DealsListPage from '../features/deals/DealsListPage';
 import DealFormPage from '../features/deals/DealFormPage';
 import DealDetailPage from '../features/deals/DealDetailPage';
 import MyActivitiesPage from '../features/activities/MyActivitiesPage';
+import UsersPage from '../features/users/UsersPage';
 
 function AppRoutes() {
   return (
@@ -126,6 +127,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <MyActivitiesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute roles={['admin']}>
+            <UsersPage />
           </ProtectedRoute>
         }
       />

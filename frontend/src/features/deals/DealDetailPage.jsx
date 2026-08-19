@@ -5,13 +5,9 @@ import FullPageSpinner from '../../components/FullPageSpinner';
 import StageBadge from '../../components/StageBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
-import {
-  useGetDealQuery,
-  useUpdateDealMutation,
-  useChangeDealStageMutation,
-  useAssignDealMutation,
-  useGetDealTimelineQuery,
-} from './dealsApi';
+import { useGetDealQuery, useUpdateDealMutation, useAssignDealMutation, useGetDealTimelineQuery } from './dealsApi';
+import { useDealStageChange } from './useDealStageChange';
+import DealStageDialogs from './DealStageDialogs';
 import TimelineFeed from '../../components/TimelineFeed';
 import FollowUpsSection from '../../components/FollowUpsSection';
 import { useGetAssignableUsersQuery } from '../users/usersApi';
@@ -31,12 +27,9 @@ function DealDetailPage() {
   const assignableUsers = assignableData?.data || [];
   const assignableUserIds = assignableUsers.map((u) => String(u._id));
 
-  const [changeStage, { isLoading: isChangingStage }] = useChangeDealStageMutation();
   const [assignDeal, { isLoading: isAssigning }] = useAssignDealMutation();
+  const stageChange = useDealStageChange();
 
-  const [stageConfirm, setStageConfirm] = useState(null); // { nextStage, message }
-  const [lossReasonOpen, setLossReasonOpen] = useState(false);
-  const [lossReason, setLossReason] = useState('');
   const [assignConfirm, setAssignConfirm] = useState(null); // targetUserId
 
   if (isLoading) return <FullPageSpinner />;
@@ -62,42 +55,7 @@ function DealDetailPage() {
   const editable = canEditDeal(user, deal, assignableUserIds);
   const isManagerOrAdmin = user.role === 'admin' || user.role === 'sales_manager';
 
-  const runStageChange = async (payload) => {
-    try {
-      await changeStage({ id, ...payload }).unwrap();
-      showSuccess('Deal stage updated');
-    } catch (err) {
-      showError(err.data?.message || 'Failed to update stage');
-    } finally {
-      setStageConfirm(null);
-      setLossReasonOpen(false);
-      setLossReason('');
-    }
-  };
-
-  const handleStageSelect = (e) => {
-    const nextStage = e.target.value;
-    if (nextStage === deal.stage) return;
-
-    if (nextStage === 'Lost') {
-      setLossReasonOpen(true);
-      return;
-    }
-    if (nextStage === 'Won') {
-      setStageConfirm({ nextStage, message: 'Mark this deal as Won? This closes the deal.' });
-      return;
-    }
-    if (CLOSED_STAGES.includes(deal.stage)) {
-      setStageConfirm({ nextStage, message: `Reopen this deal into ${nextStage}? This clears its close date.` });
-      return;
-    }
-    runStageChange({ stage: nextStage });
-  };
-
-  const confirmLossReason = () => {
-    if (!lossReason.trim()) return;
-    runStageChange({ stage: 'Lost', lossReason: lossReason.trim() });
-  };
+  const handleStageSelect = (e) => stageChange.requestStageChange(deal, e.target.value);
 
   const openAssignConfirm = (value) => setAssignConfirm(value);
 
@@ -189,7 +147,7 @@ function DealDetailPage() {
               <select
                 value={deal.stage}
                 onChange={handleStageSelect}
-                disabled={isChangingStage}
+                disabled={stageChange.isChangingStage}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
               >
                 {STAGES.map((s) => (
@@ -238,16 +196,6 @@ function DealDetailPage() {
       </main>
 
       <ConfirmDialog
-        open={Boolean(stageConfirm)}
-        title="Update stage"
-        message={stageConfirm?.message || ''}
-        confirmLabel="Confirm"
-        isLoading={isChangingStage}
-        onConfirm={() => runStageChange({ stage: stageConfirm.nextStage })}
-        onCancel={() => setStageConfirm(null)}
-      />
-
-      <ConfirmDialog
         open={Boolean(assignConfirm)}
         title="Update assignment"
         message={`Assign this deal to ${assignConfirmLabel}?`}
@@ -257,41 +205,7 @@ function DealDetailPage() {
         onCancel={() => setAssignConfirm(null)}
       />
 
-      {lossReasonOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-slate-800">Mark as Lost</h2>
-            <p className="mt-1 text-sm text-slate-500">A reason is required when closing a deal as Lost.</p>
-            <textarea
-              autoFocus
-              value={lossReason}
-              onChange={(e) => setLossReason(e.target.value)}
-              placeholder="e.g. Budget cut, chose a competitor…"
-              rows={3}
-              className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setLossReasonOpen(false);
-                  setLossReason('');
-                }}
-                disabled={isChangingStage}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLossReason}
-                disabled={isChangingStage || !lossReason.trim()}
-                className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
-              >
-                {isChangingStage ? 'Saving…' : 'Mark as Lost'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DealStageDialogs {...stageChange} />
     </div>
   );
 }
